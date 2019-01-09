@@ -24,7 +24,16 @@ module.exports = NodeHelper.create({
         }
         // If relays are being used in place of HDMI
         if (this.config.relayPin !== false) {
-            this.relay.writeSync(this.config.relayState);
+	    console.log("Activating monitor");
+	    
+	    var self = this;
+	    this.relay.writeSync(self.config.relayState);
+	    setTimeout(function() {
+		self.relay.writeSync((self.config.relayState + 1) % 2);
+	    }, 3000);
+	    
+            //this.relay.writeSync(this.config.relayState);
+	    //this.relay.writeSync((this.config.relayState + 1) % 2);
         }
         else if (this.config.relayPin === false) {
             // Check if hdmi output is already on
@@ -44,7 +53,16 @@ module.exports = NodeHelper.create({
         }
         // If relays are being used in place of HDMI
         if (this.config.relayPin !== false) {
-            this.relay.writeSync((this.config.relayState + 1) % 2);
+	    console.log("Deactivating monitor");
+	    
+	    var self = this;
+	    this.relay.writeSync(self.config.relayState);
+	    setTimeout(function() {
+		self.relay.writeSync((self.config.relayState + 1) % 2);
+	    }, 3000);
+	    
+	    //this.relay.writeSync(this.config.relayState);
+            //this.relay.writeSync((this.config.relayState + 1) % 2);
         }
         else if (this.config.relayPin === false) {
             exec("/usr/bin/vcgencmd display_power 0", null);
@@ -60,7 +78,7 @@ module.exports = NodeHelper.create({
             // Setup for relay pin
             if (this.config.relayPin) {
                 this.relay = new Gpio(this.config.relayPin, 'out');
-                this.relay.writeSync(this.config.relayState);
+                //this.relay.writeSync((this.config.relayState + 1) % 2);
                 exec("/usr/bin/vcgencmd display_power 1", null);
             }
 
@@ -137,6 +155,7 @@ module.exports = NodeHelper.create({
             });
 
             this.started = true;
+
 
         } else if (notification === 'SCREEN_WAKEUP') {
             this.activateMonitor();
