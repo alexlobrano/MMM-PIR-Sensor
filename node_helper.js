@@ -1,4 +1,4 @@
-'use strict';
+// 'use strict';
 
 /* Magic Mirror
 * Module: MMM-PIR-Sensor
@@ -10,10 +10,21 @@
 const NodeHelper = require('node_helper');
 const Gpio = require('onoff').Gpio;
 const exec = require('child_process').exec;
+var alexaControl = false; // false is normal operation, true means only Alexa can resume operation
+var mirrorStatus = true; // true is on, false is off
 
 module.exports = NodeHelper.create({
     start: function () {
         this.started = false;
+    },
+
+    wait: function(delay) {
+	// delay is milliseconds to wait
+	var start = new Date().getTime();
+	var end = start;
+	while(end < start + delay) {
+	    end = new Date().getTime();
+	}
     },
 
     activateMonitor: function () {
@@ -23,17 +34,13 @@ module.exports = NodeHelper.create({
             return;
         }
         // If relays are being used in place of HDMI
-        if (this.config.relayPin !== false) {
+        if ((this.config.relayPin !== false) && !alexaControl && !mirrorStatus) {
 	    console.log("Activating monitor");
-	    
-	    var self = this;
-	    this.relay.writeSync(self.config.relayState);
-	    setTimeout(function() {
-		self.relay.writeSync((self.config.relayState + 1) % 2);
-	    }, 3000);
-	    
-            //this.relay.writeSync(this.config.relayState);
-	    //this.relay.writeSync((this.config.relayState + 1) % 2);
+	    this.relay.writeSync(this.config.relayState);
+	    this.wait(3500);
+	    this.relay.writeSync((this.config.relayState + 1) % 2);
+	    mirrorStatus = true;
+	    this.wait(6500);
         }
         else if (this.config.relayPin === false) {
             // Check if hdmi output is already on
@@ -52,17 +59,13 @@ module.exports = NodeHelper.create({
             return;
         }
         // If relays are being used in place of HDMI
-        if (this.config.relayPin !== false) {
+        if ((this.config.relayPin !== false) && !alexaControl && mirrorStatus) {
 	    console.log("Deactivating monitor");
-	    
-	    var self = this;
-	    this.relay.writeSync(self.config.relayState);
-	    setTimeout(function() {
-		self.relay.writeSync((self.config.relayState + 1) % 2);
-	    }, 3000);
-	    
-	    //this.relay.writeSync(this.config.relayState);
-            //this.relay.writeSync((this.config.relayState + 1) % 2);
+	    this.relay.writeSync(this.config.relayState);
+	    this.wait(3500);
+	    this.relay.writeSync((this.config.relayState + 1) % 2);
+	    mirrorStatus = false;
+	    this.wait(6500);
         }
         else if (this.config.relayPin === false) {
             exec("/usr/bin/vcgencmd display_power 0", null);
@@ -71,7 +74,8 @@ module.exports = NodeHelper.create({
 
     // Subclass socketNotificationReceived received.
     socketNotificationReceived: function (notification, payload) {
-        if (notification === 'CONFIG' && this.started == false) {
+	console.log("PIR notification in socket: " + notification);
+        if (notification === "CONFIG" && this.started == false) {
             const self = this;
             this.config = payload;
 
@@ -157,9 +161,21 @@ module.exports = NodeHelper.create({
             this.started = true;
 
 
-        } else if (notification === 'SCREEN_WAKEUP') {
+        } else if (notification === "SCREEN_WAKEUP") {
             this.activateMonitor();
-        }
+        } else if (notification === "ALEXA_MIRROR_ON") {
+	    console.log("Turning mirror on due to Alexa command");
+	    if(alexaControl) { 
+		alexaControl = false;
+		this.activateMonitor();
+	    }
+	} else if (notification === "ALEXA_MIRROR_OFF") {
+	    console.log("Turning mirror off due to Alexa command");
+	    if(!alexaControl) { 
+		this.deactivateMonitor();
+	        alexaControl = true;
+	    }
+	}
     }
 
 });

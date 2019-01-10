@@ -37,8 +37,17 @@ Module.register('MMM-PIR-Sensor',{
 	},
 
 	notificationReceived: function (notification, payload) {
-		if (notification === 'SCREEN_WAKEUP') {
+		Log.info(this.name + " received a system notification: " + notification);
+		if (notification === "SCREEN_WAKEUP") {
 			this.sendNotification(notification, payload)
+		}
+		else if (notification === "ALEXA_MIRROR_ON") {
+			Log.info(this.name + " is sending " + notification + " to socket");
+			this.sendSocketNotification(notification, payload);
+		}
+		else if (notification === "ALEXA_MIRROR_OFF") {
+			Log.info(this.name + " is sending " + notification + " to socket");
+			this.sendSocketNotification(notification, payload);
 		}
 	},
 
